@@ -33,6 +33,7 @@ var DEFAULT_RADIUS = 30;
 var TEXT_OFFSET_X = -6;
 var TEXT_OFFSET_Y = 6;
 var DEFAULT_FONT = "24px monospace";
+var EDGE_WEIGHT_FONT = "18px monospace";
 var canvasCenter = {
     x: parseInt(canvas.width/2),
     y: parseInt(canvas.height/2)
@@ -79,13 +80,13 @@ randomizeButton.addEventListener('click', () => {
             let hasEdge = false;
             for (let j=i+1; j<nodeCount; j++) {
                 let edge = parseInt(Math.random() * 10000) % 2 === 0 ? 1 : 0;
-                temp[j][i] = temp[i][j] = edge;
+                temp[j][i] = temp[i][j] = getRandomNumber(0, 10);
                 hasEdge = (edge > 0);
             }
             if (!hasEdge) {
                 let index = -1;
                 while (index <= 0 || index == i ) {
-                    index = parseInt(Math.random() * 10000) % nodeCount;
+                    index = getRandomNumber(0, nodeCount);
                 }
                 temp[i][index] = temp[index][i] = 1;
             }
@@ -221,6 +222,7 @@ function redraw() {
         for (let j=i+1; j<adjMatrix[i].length; j++) {
             if (adjMatrix[i][j] > 0) {
                 drawEdge(nodes[i], nodes[j]);
+                drawEdgeWeightText(((nodes[i].x + nodes[j].x)/2), ((nodes[i].y + nodes[j].y)/2), adjMatrix[i][j], 'red');
             }
         }
     }
@@ -240,16 +242,27 @@ function drawEdge(node1, node2) {
     ctx.lineWidth = temp;
 }
 
-function drawText(posx, posy, text) {
+function drawText(posx, posy, text, color) {
     // Adding offsets for proper text centering
     posx = parseInt(posx + TEXT_OFFSET_X);
     posy = parseInt(posy + TEXT_OFFSET_Y);
 
     console.info(`Drawing text '${text}' at position (${posx}, ${posy})`);
     let temp = ctx.fillStyle;
-    ctx.fillStyle = "#FFF";
+    ctx.fillStyle = color ? color : "#FFF";
     ctx.font = DEFAULT_FONT;
     ctx.fillText(text, posx, posy);
+    ctx.fillStyle = temp;
+}
+
+function drawEdgeWeightText(posx, posy, weight, color) {
+    posx = parseInt(posx );
+    posy = parseInt(posy );
+
+    let temp = ctx.fillStyle;
+    ctx.fillStyle = color ? color : 'blue';
+    ctx.font = EDGE_WEIGHT_FONT;
+    ctx.fillText(`${weight}`, posx, posy);
     ctx.fillStyle = temp;
 }
 
@@ -269,4 +282,20 @@ function drawNumberedCircle(posx, posy) {
 // JS Math trig functions accept only radians
 function toRadians (angle) {
     return angle * (Math.PI / 180);
+}
+
+function toDegrees (radians) {
+    return radians * (180 / Math.PI);
+}
+
+// calculate the angle between 2 points relative to the horizontal axis in radians
+function getAngleBetweenPoints (p1, p2) {
+    let deltaX = p1.x - p2.x;
+    let deltaY = p1.y - p2.y;
+    return Math.atan2(p2.x-p2.x, p1.y-p2.y);
+}
+
+// returns a random number in the inclusive range of (numStart, numEnd)
+function getRandomNumber(numStart, numEnd) {
+    return parseInt((parseInt(Math.random() * 10000000) + numStart) % numEnd);
 }
