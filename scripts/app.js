@@ -1,17 +1,5 @@
-// some matrices for testing
-var graphA = [
-    [0, 1, 1],
-    [1, 0, 1],
-    [1, 1, 0],
-];
-
-var graphB = [
-    [0, 1, 0],
-    [1, 0, 1],
-    [0, 1, 0]
-];
-
-var graphC = [
+// sample adjacency matrix for initial load
+var graphC              = [
     [0, 3, 7, 6, 0],
     [3, 0, 0, 1, 2],
     [7, 0, 0, 0, 9],
@@ -19,22 +7,24 @@ var graphC = [
     [0, 2, 9, 0, 0]
 ];
 
+// constant values
+const DEFAULT_RADIUS      = 30;
+const TEXT_OFFSET_X       = -6;
+const TEXT_OFFSET_Y       = 6;
+const DEFAULT_FONT        = "24px monospace";
+const EDGE_WEIGHT_FONT    = "18px monospace";
+const HIGHLIGHT_COLOR     = "#0FFFF0AA";
+const DEFAULT_COLOR       = "#000000FF";
+
 // DOM objects
 var canvas              = document.querySelector('#canvas');
-var ctx                 = canvas.getContext('2d');
 var textarea            = document.querySelector("#matrixInput");
 var goButton            = document.querySelector("#goBtn");
 var randomizeButton     = document.querySelector("#randomizeBtn");
+var ctx                 = canvas.getContext('2d');
 
 // misc control variables
 var counter             = 0;
-var DEFAULT_RADIUS      = 30;
-var TEXT_OFFSET_X       = -6;
-var TEXT_OFFSET_Y       = 6;
-var DEFAULT_FONT        = "24px monospace";
-var EDGE_WEIGHT_FONT    = "18px monospace";
-var HIGHLIGHT_COLOR     = "#00FF00AA";
-var DEFAULT_COLOR       = "#000000FF";
 var selectedNode        = null;
 var canvasCenter        = {
     x: parseInt(canvas.width/2),
@@ -77,7 +67,7 @@ randomizeButton.addEventListener ('click', () => {
             let hasEdge = false;
             for (let j=i+1; j<nodeCount; j++) {
                 let edge = parseInt(Math.random() * 10000) % 2 === 0 ? 1 : 0;
-                temp[j][i] = temp[i][j] = getRandomNumber(0, 10);
+                temp[j][i] = temp[i][j] = getRandomNumber(1, 10);
                 hasEdge = (edge > 0);
             }
             if (!hasEdge) {
@@ -85,7 +75,7 @@ randomizeButton.addEventListener ('click', () => {
                 while (index <= 0 || index == i ) {
                     index = getRandomNumber(0, nodeCount);
                 }
-                temp[i][index] = temp[index][i] = 1;
+                temp[i][index] = temp[index][i] = getRandomNumber(1, 10);
             }
         }
 
@@ -130,7 +120,7 @@ canvas.addEventListener ('mousemove', (mouseEvent) => {
         else
             nodes.forEach(node => node.isHighlighted = false);
     }
-    redraw();
+    drawGraph();
 });
 
 // returns index of the node that contains the point or null
@@ -143,6 +133,7 @@ function getNodeAtPoint (x, y) {
     return null;
 }
 
+// initializes the given adjacency matrix if it's a valid input
 function loadMatrix (input) {
     let x = JSON.parse(input.value);
     
@@ -165,6 +156,7 @@ function loadMatrix (input) {
     initGraph(x);
 }
 
+// initializes the graph, expects a valid adjacency matrix
 function initGraph (adjacencyMatrix) {
     // clearing node data 
     while(nodes.length > 0) {
@@ -197,7 +189,7 @@ function initGraph (adjacencyMatrix) {
         }
     }
 
-    redraw();
+    drawGraph();
     console.log('Node data');
     console.dir(nodes);
 }
@@ -214,6 +206,7 @@ function getY (angle, radius, cy) {
     return cy + (radius * Math.sin(toRadians(angle)));
 }
 
+// reset the canvas
 function clearCanvas () {
     counter = 0;
     ctx = canvas.getContext("2d");
@@ -221,7 +214,8 @@ function clearCanvas () {
     ctx.beginPath();
 }
 
-function redraw () {
+// draws the graph (nodes, edges, weights etc..)
+function drawGraph () {
     clearCanvas();
     for (let i=0; i<adjMatrix.length; i++) {
         for (let j=i+1; j<adjMatrix[i].length; j++) {
@@ -236,6 +230,7 @@ function redraw () {
     }
 }
 
+// draw a colored edge from node1 to node2
 function drawEdge (node1, node2, color) {
     console.info(`Drawing edge from node ${JSON.stringify(node1)} to node ${JSON.stringify(node2)}`);
     let temp = ctx.lineWidth;
@@ -250,7 +245,7 @@ function drawEdge (node1, node2, color) {
     ctx.strokeStyle = tempColor;
 }
 
-function drawText (posx, posy, text, color) {
+function drawNodeText (posx, posy, text, color) {
     // Adding offsets for proper text centering
     posx = parseInt(posx + TEXT_OFFSET_X);
     posy = parseInt(posy + TEXT_OFFSET_Y);
@@ -285,9 +280,10 @@ function drawCircleWithRadius (posx, posy, radius, isHighlighted) {
     ctx.fillStyle = temp;
 }
 
+// draws a circle with the label text as the current value of counter 
 function drawNumberedCircle (posx, posy, isHighlighted) {
     drawCircleWithRadius(posx, posy, DEFAULT_RADIUS, isHighlighted);
-    drawText(posx, posy, String.fromCharCode(65 + counter++));
+    drawNodeText(posx, posy, String.fromCharCode(65 + counter++));
 }
 
 // JS Math trig functions accept only radians
@@ -306,7 +302,7 @@ function getAngleBetweenPoints (p1, p2) {
     return Math.atan2(p2.x-p2.x, p1.y-p2.y);
 }
 
-// returns a random number in the inclusive range of (numStart, numEnd)
+// returns a random number in the range (numStart, numEnd-1)
 function getRandomNumber (numStart, numEnd) {
     return parseInt((parseInt(Math.random() * 10000000) + numStart) % numEnd);
 }
