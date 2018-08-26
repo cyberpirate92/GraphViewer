@@ -20,50 +20,47 @@ var graphC = [
 ];
 
 // DOM objects
-var canvas = document.querySelector('#canvas');
-var ctx = canvas.getContext('2d');
-var textarea = document.querySelector("#matrixInput");
-var goButton = document.querySelector("#goBtn");
-var randomizeButton = document.querySelector("#randomizeBtn");
+var canvas              = document.querySelector('#canvas');
+var ctx                 = canvas.getContext('2d');
+var textarea            = document.querySelector("#matrixInput");
+var goButton            = document.querySelector("#goBtn");
+var randomizeButton     = document.querySelector("#randomizeBtn");
 
 // misc control variables
-var counter = 0;
-var shapeProperties;
-var DEFAULT_RADIUS = 30;
-var TEXT_OFFSET_X = -6;
-var TEXT_OFFSET_Y = 6;
-var DEFAULT_FONT = "24px monospace";
-var EDGE_WEIGHT_FONT = "18px monospace";
-var canvasCenter = {
+var counter             = 0;
+var DEFAULT_RADIUS      = 30;
+var TEXT_OFFSET_X       = -6;
+var TEXT_OFFSET_Y       = 6;
+var DEFAULT_FONT        = "24px monospace";
+var EDGE_WEIGHT_FONT    = "18px monospace";
+var HIGHLIGHT_COLOR     = "#00FF00AA";
+var DEFAULT_COLOR       = "#000000FF";
+var selectedNode        = null;
+var canvasCenter        = {
     x: parseInt(canvas.width/2),
     y: parseInt(canvas.height/2)
 };
-var selectedNode = null;
 
 // primary data store - contains information about the objects on the canvas
-var nodes = [];
-var adjMatrix = null;
+var nodes               = [];
+var adjMatrix           = null;
 
 // Event listeners
-window.addEventListener('load', () => {
+window.addEventListener ('load', () => {
     textarea.value = JSON.stringify(graphC);
     initGraph(graphC);
 });
 
-goButton.addEventListener('click', () => {
+goButton.addEventListener ('click', () => {
     loadMatrix(textarea);
 });
 
-randomizeButton.addEventListener('click', () => {
-    let nodeCount = parseInt(prompt("How many nodes (2-26)?", '6'));
-    if (nodeCount <= 1) {
-        alert("Need atleast 2 nodes"); 
-        return;
-    }
-    else if (nodeCount > 26) {
+randomizeButton.addEventListener ('click', () => {
+    let nodeCount = parseInt(prompt("How many nodes (3-26)?", '6'));
+    if (nodeCount <= 2)
+        alert("Need atleast 3 nodes"); 
+    else if (nodeCount > 26)
         alert("Cannot exceed 26 nodes");
-        return;
-    }
     else {
         let temp = [];
 
@@ -99,47 +96,54 @@ randomizeButton.addEventListener('click', () => {
     }
 });
 
-canvas.addEventListener('mousedown', (mouseEvent) => {
-
+canvas.addEventListener ('mousedown', (mouseEvent) => {
     console.info('MouseDown');
     console.log(mouseEvent);
-    
-    for (let i=0; i<nodes.length; i++) {
-        let node = nodes[i];
-
-        let R = DEFAULT_RADIUS;
-        let x = mouseEvent.clientX;
-        let y = mouseEvent.clientY;
-        
-        if (( x >= node.x-R && x <= node.x+R ) && ( y >= node.y-R && y <= node.y+R )) {
-            selectedNode = i;
-            break;
-        }
-    }
+    selectedNode = getNodeAtPoint(mouseEvent.clientX, mouseEvent.clientY);
     console.info(`Selected Node Index: ${selectedNode}`);
 });
 
-canvas.addEventListener('mouseup', (mouseEvent) => {
-
+canvas.addEventListener ('mouseup', (mouseEvent) => {
     console.info('MouseUp');
     console.log(mouseEvent);
-
     selectedNode = null;
     console.info(`Selected Node Index: ${selectedNode}`);
 });
 
-canvas.addEventListener('mousemove', (mouseEvent) => {
-
+canvas.addEventListener ('mousemove', (mouseEvent) => {
     if (selectedNode || selectedNode === 0) {
         console.info('MouseMove');
         console.log(mouseEvent);
         nodes[selectedNode].x = mouseEvent.clientX;
         nodes[selectedNode].y = mouseEvent.clientY;
-        redraw();
     }
+    else {
+        let index = getNodeAtPoint(mouseEvent.clientX, mouseEvent.clientY);
+        if (index || index === 0 ) {
+            nodes[index].isHighlighted = true;
+            for (let i=0; i<adjMatrix[index].length; i++) {
+                if (adjMatrix[index][i] > 0) {
+                    nodes[i].isHighlighted = true;
+                }
+            }
+        }
+        else
+            nodes.forEach(node => node.isHighlighted = false);
+    }
+    redraw();
 });
 
-function loadMatrix(input) {
+// returns index of the node that contains the point or null
+function getNodeAtPoint (x, y) {
+    let R = DEFAULT_RADIUS;
+    for (let i=0; i<nodes.length; i++) {
+        if (( x >= nodes[i].x-R && x <= nodes[i].x+R ) && ( y >= nodes[i].y-R && y <= nodes[i].y+R ))
+            return i;
+    }
+    return null;
+}
+
+function loadMatrix (input) {
     let x = JSON.parse(input.value);
     
     if (!(x instanceof Array)) {
@@ -161,7 +165,7 @@ function loadMatrix(input) {
     initGraph(x);
 }
 
-function initGraph(adjacencyMatrix) {
+function initGraph (adjacencyMatrix) {
     // clearing node data 
     while(nodes.length > 0) {
         nodes.pop();
@@ -182,6 +186,7 @@ function initGraph(adjacencyMatrix) {
         nodes.push({
             x: getX((angleDivident * (i+1)), 120, canvasCenter.x),
             y: getY((angleDivident * (i+1)), 120, canvasCenter.y),
+            isHighlighted: false
         });
         if ( curX + (2 * DEFAULT_RADIUS) + offset > canvas.width) {
             curX = offset + (2 * DEFAULT_RADIUS);
@@ -199,50 +204,53 @@ function initGraph(adjacencyMatrix) {
 
 // get the x coordinate on the circle circumference 
 // provided the origin, radius and angle 
-function getX(angle, radius, cx) {
+function getX (angle, radius, cx) {
     return cx + (radius * Math.cos(toRadians(angle)));
 }
 
 // get the y coordinate on the circle circumference 
 // provided the origin, radius and angle 
-function getY(angle, radius, cy) {
+function getY (angle, radius, cy) {
     return cy + (radius * Math.sin(toRadians(angle)));
 }
 
-function clearCanvas() {
+function clearCanvas () {
     counter = 0;
     ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     ctx.beginPath();
 }
 
-function redraw() {
+function redraw () {
     clearCanvas();
     for (let i=0; i<adjMatrix.length; i++) {
         for (let j=i+1; j<adjMatrix[i].length; j++) {
             if (adjMatrix[i][j] > 0) {
-                drawEdge(nodes[i], nodes[j]);
+                drawEdge(nodes[i], nodes[j], (nodes[i].isHighlighted === nodes[j].isHighlighted && nodes[i].isHighlighted === true) ? HIGHLIGHT_COLOR : DEFAULT_COLOR);
                 drawEdgeWeightText(((nodes[i].x + nodes[j].x)/2), ((nodes[i].y + nodes[j].y)/2), adjMatrix[i][j], 'red');
             }
         }
     }
     for (let i=0; i<nodes.length; i++) {
-        drawNumberedCircle(nodes[i].x, nodes[i].y);
+        drawNumberedCircle(nodes[i].x, nodes[i].y, nodes[i].isHighlighted);
     }
 }
 
-function drawEdge(node1, node2) {
+function drawEdge (node1, node2, color) {
     console.info(`Drawing edge from node ${JSON.stringify(node1)} to node ${JSON.stringify(node2)}`);
     let temp = ctx.lineWidth;
+    let tempColor = ctx.strokeStyle;
     ctx.lineWidth = 2;
+    ctx.strokeStyle = color || DEFAULT_COLOR;
     ctx.beginPath();
     ctx.moveTo(node1.x, node1.y);
     ctx.lineTo(node2.x, node2.y);
     ctx.stroke();
     ctx.lineWidth = temp;
+    ctx.strokeStyle = tempColor;
 }
 
-function drawText(posx, posy, text, color) {
+function drawText (posx, posy, text, color) {
     // Adding offsets for proper text centering
     posx = parseInt(posx + TEXT_OFFSET_X);
     posy = parseInt(posy + TEXT_OFFSET_Y);
@@ -255,7 +263,7 @@ function drawText(posx, posy, text, color) {
     ctx.fillStyle = temp;
 }
 
-function drawEdgeWeightText(posx, posy, weight, color) {
+function drawEdgeWeightText (posx, posy, weight, color) {
     posx = parseInt(posx );
     posy = parseInt(posy );
 
@@ -266,16 +274,19 @@ function drawEdgeWeightText(posx, posy, weight, color) {
     ctx.fillStyle = temp;
 }
 
-function drawCircleWithRadius(posx, posy, radius) {
+function drawCircleWithRadius (posx, posy, radius, isHighlighted) {
     console.log(`Circle drawn at pos (${posx}, ${posy}) with radius ${radius}`);
+    let temp = ctx.fillStyle;
+    ctx.fillStyle = isHighlighted ? HIGHLIGHT_COLOR : DEFAULT_COLOR;
     ctx.beginPath();
     ctx.arc(posx, posy, radius, 0, 2 * Math.PI);
     ctx.stroke();
     ctx.fill();
+    ctx.fillStyle = temp;
 }
 
-function drawNumberedCircle(posx, posy) {
-    drawCircleWithRadius(posx, posy, DEFAULT_RADIUS);
+function drawNumberedCircle (posx, posy, isHighlighted) {
+    drawCircleWithRadius(posx, posy, DEFAULT_RADIUS, isHighlighted);
     drawText(posx, posy, String.fromCharCode(65 + counter++));
 }
 
@@ -296,6 +307,6 @@ function getAngleBetweenPoints (p1, p2) {
 }
 
 // returns a random number in the inclusive range of (numStart, numEnd)
-function getRandomNumber(numStart, numEnd) {
+function getRandomNumber (numStart, numEnd) {
     return parseInt((parseInt(Math.random() * 10000000) + numStart) % numEnd);
 }
