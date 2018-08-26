@@ -111,7 +111,10 @@ canvas.addEventListener('mousemove', (mouseEvent) => {
 });
 
 function initGraph(adjacencyMatrix) {
-    
+    // clearing node data 
+    while(nodes.length > 0) {
+        nodes.pop();
+    }
     console.log('Initializing Graph...');
     console.dir(adjacencyMatrix);
 
@@ -142,6 +145,7 @@ function initGraph(adjacencyMatrix) {
 
 function clearCanvas() {
     counter = 0;
+    ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     ctx.beginPath();
 }
