@@ -24,6 +24,7 @@ var canvas = document.querySelector('#canvas');
 var ctx = canvas.getContext('2d');
 var textarea = document.querySelector("#matrixInput");
 var goButton = document.querySelector("#goBtn");
+var randomizeButton = document.querySelector("#randomizeBtn");
 
 // misc control variables
 var counter = 0;
@@ -49,25 +50,52 @@ window.addEventListener('load', () => {
 });
 
 goButton.addEventListener('click', () => {
-    let x = JSON.parse(textarea.value);
-    
-    if (!(x instanceof Array)) {
-        alert("Invalid adjacency matrix");
+    loadMatrix(textarea);
+});
+
+randomizeButton.addEventListener('click', () => {
+    let nodeCount = parseInt(prompt("How many nodes (2-26)?", '6'));
+    if (nodeCount <= 1) {
+        alert("Need atleast 2 nodes"); 
         return;
     }
+    else if (nodeCount > 26) {
+        alert("Cannot exceed 26 nodes");
+        return;
+    }
+    else {
+        let temp = [];
 
-    for (let i=0; i<x.length; i++) {
-        if (!(x[i] instanceof Array)) {
-            alert("Invalid adjacency matrix");
-            return;
+        // creating a NxN matrix filled with 0s where N = nodeCount
+        for (let i=0; i<nodeCount; i++) {
+            temp.push([]);
+            for (let j=0; j<nodeCount; j++) {
+                temp[i].push(0);
+            }
         }
-        if (x[i].length != x.length) {
-            alert("Not a squre matrix: Adjacency Matrix must be a square matrix");
-            return;
+
+        // populating matrix with random edges
+        for (let i=0; i<nodeCount; i++) {
+            let hasEdge = false;
+            for (let j=i+1; j<nodeCount; j++) {
+                let edge = parseInt(Math.random() * 10000) % 2 === 0 ? 1 : 0;
+                temp[j][i] = temp[i][j] = edge;
+                hasEdge = (edge > 0);
+            }
+            if (!hasEdge) {
+                let index = -1;
+                while (index <= 0 || index == i ) {
+                    index = parseInt(Math.random() * 10000) % nodeCount;
+                }
+                temp[i][index] = temp[index][i] = 1;
+            }
+        }
+
+        if (temp.length > 0) {
+            textarea.value = JSON.stringify(temp);
+            loadMatrix(textarea);
         }
     }
-
-    initGraph(x);
 });
 
 canvas.addEventListener('mousedown', (mouseEvent) => {
@@ -109,6 +137,28 @@ canvas.addEventListener('mousemove', (mouseEvent) => {
         redraw();
     }
 });
+
+function loadMatrix(input) {
+    let x = JSON.parse(input.value);
+    
+    if (!(x instanceof Array)) {
+        alert("Invalid adjacency matrix");
+        return;
+    }
+
+    for (let i=0; i<x.length; i++) {
+        if (!(x[i] instanceof Array)) {
+            alert("Invalid adjacency matrix");
+            return;
+        }
+        if (x[i].length != x.length) {
+            alert("Not a squre matrix: Adjacency Matrix must be a square matrix");
+            return;
+        }
+    }
+
+    initGraph(x);
+}
 
 function initGraph(adjacencyMatrix) {
     // clearing node data 
