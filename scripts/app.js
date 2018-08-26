@@ -33,8 +33,8 @@ var TEXT_OFFSET_X = -6;
 var TEXT_OFFSET_Y = 6;
 var DEFAULT_FONT = "24px monospace";
 var canvasCenter = {
-    x: canvas.width/2,
-    y: canvas.height/2
+    x: parseInt(canvas.width/2),
+    y: parseInt(canvas.height/2)
 };
 var selectedNode = null;
 
@@ -119,15 +119,18 @@ function initGraph(adjacencyMatrix) {
     console.dir(adjacencyMatrix);
 
     adjMatrix = adjacencyMatrix;
-    
+
+    let nodeCount = adjMatrix.length;
+    let angleDivident = 360 / nodeCount;
+
     let offset = DEFAULT_RADIUS/2;
     let curX = offset + (2 * DEFAULT_RADIUS);
     let curY = offset + (2 * DEFAULT_RADIUS);
     
     for (let i=0; i<adjMatrix.length; i++) {
         nodes.push({
-            x: curX,
-            y: curY,
+            x: getX((angleDivident * (i+1)), 120, canvasCenter.x),
+            y: getY((angleDivident * (i+1)), 120, canvasCenter.y),
         });
         if ( curX + (2 * DEFAULT_RADIUS) + offset > canvas.width) {
             curX = offset + (2 * DEFAULT_RADIUS);
@@ -141,6 +144,18 @@ function initGraph(adjacencyMatrix) {
     redraw();
     console.log('Node data');
     console.dir(nodes);
+}
+
+// get the x coordinate on the circle circumference 
+// provided the origin, radius and angle 
+function getX(angle, radius, cx) {
+    return cx + (radius * Math.cos(toRadians(angle)));
+}
+
+// get the y coordinate on the circle circumference 
+// provided the origin, radius and angle 
+function getY(angle, radius, cy) {
+    return cy + (radius * Math.sin(toRadians(angle)));
 }
 
 function clearCanvas() {
@@ -199,4 +214,9 @@ function drawCircleWithRadius(posx, posy, radius) {
 function drawNumberedCircle(posx, posy) {
     drawCircleWithRadius(posx, posy, DEFAULT_RADIUS);
     drawText(posx, posy, String.fromCharCode(65 + counter++));
+}
+
+// JS Math trig functions accept only radians
+function toRadians (angle) {
+    return angle * (Math.PI / 180);
 }
