@@ -11,38 +11,60 @@ const HIGHLIGHT_COLOR     = "#0FFFF0AA";
 const DEFAULT_COLOR       = "#000000FF";
 
 // DOM objects
-var canvas              = document.querySelector('#canvas');
 var textarea            = document.querySelector("#matrixInput");
 var goButton            = document.querySelector("#goBtn");
 var randomizeButton     = document.querySelector("#randomizeBtn");
 var exportButton        = document.querySelector("#exportBtn");
 var importButton        = document.querySelector("#importBtn");
-var ctx                 = canvas.getContext('2d');
 
 // misc control variables
 var counter             = 0;
 var selectedNode        = null;
-var canvasCenter        = {
-    x: parseInt(canvas.width/2),
-    y: parseInt(canvas.height/2)
-};
 
 // primary data store - contains information about the objects on the canvas
 var nodes               = [];
 var adjMatrix           = null;
 
+// canvas related, will be initialized dynamically via initializeCanvas()
+var canvas;
+var ctx;
+
+// debounce related
+var rtime;
+var timeout = false;
+var delta = 200;
+
 // Event listeners
 window.addEventListener ('load', () => {
-
+    initializeCanvas();
     textarea.value = indentString(JSON.stringify(sample));
     initGraph(sample);
 });
 
-goButton.addEventListener ('click', () => {
+window.addEventListener('resize', () => {
+    rtime = new Date();
+    if (timeout === false) {
+        timeout = true;
+        setTimeout(onResizeEnd, delta);
+    }
+});
+
+// part of debounce logic to reduce number of canvas redraws
+function onResizeEnd () {
+    if (new Date() - rtime < delta) {
+        setTimeout(onResizeEnd, delta);
+    } else {
+        timeout = false;
+        initializeCanvas();
+        initGraph(adjMatrix);
+    }               
+}
+
+goButton.addEventListener('click', () => {
     loadMatrix(textarea);
 });
 
-randomizeButton.addEventListener ('click', () => {
+randomizeButton.addEventListener('click', () => {
     let nodeCount = parseInt(prompt("How many nodes (3-26)?", '6'));
     if (nodeCount <= 2)
         alert("Need atleast 3 nodes"); 
@@ -83,7 +105,7 @@ randomizeButton.addEventListener ('click', () => {
     }
 });
 
-exportButton.addEventListener ('click', () => {
+exportButton.addEventListener('click', () => {
     if (nodes.length <= 0) return;
     let defaultFileName = `GraphViewer_${getCurrentDateTimeString()}`;
     let filename = window.prompt("Filename", defaultFileName);
@@ -99,42 +121,63 @@ importButton.addEventListener('click', () => {
     fileInput.click();
 });
 
-canvas.addEventListener ('mousedown', (mouseEvent) => {
-    console.info('MouseDown');
-    console.log(mouseEvent);
-    selectedNode = getNodeAtPoint(mouseEvent.clientX, mouseEvent.clientY);
-    console.info(`Selected Node Index: ${selectedNode}`);
-});
-
-canvas.addEventListener ('mouseup', (mouseEvent) => {
-    console.info('MouseUp');
-    console.log(mouseEvent);
-    selectedNode = null;
-    console.info(`Selected Node Index: ${selectedNode}`);
-});
-
-canvas.addEventListener ('mousemove', (mouseEvent) => {
-    if (selectedNode || selectedNode === 0) {
-        console.info('MouseMove');
-        console.log(mouseEvent);
-        nodes[selectedNode].x = mouseEvent.clientX;
-        nodes[selectedNode].y = mouseEvent.clientY;
+function removeAllChildNodes (container) {
+    while(container.hasChildNodes()) {
+        container.removeChild(container.lastChild);
     }
-    else {
-        let index = getNodeAtPoint(mouseEvent.clientX, mouseEvent.clientY);
-        if (index || index === 0 ) {
-            nodes[index].isHighlighted = true;
-            for (let i=0; i<adjMatrix[index].length; i++) {
-                if (adjMatrix[index][i] > 0) {
-                    nodes[i].isHighlighted = true;
+}
+
+// initialize the canvas and related context
+function initializeCanvas () {
+    let canvasContainer = document.querySelector("#canvasContainer");
+    removeAllChildNodes(canvasContainer);
+    canvas = document.createElement("canvas");
+    canvas.width = canvasContainer.clientWidth;
+    canvas.height = canvasContainer.clientHeight;
+    canvasContainer.appendChild(canvas);
+    ctx = canvas.getContext("2d");
+    registerCanvasEventListeners();
+}
+
+// since canvas is created dynamically, wrapper function is required
+function registerCanvasEventListeners () {
+    canvas.addEventListener ('mousedown', (mouseEvent) => {
+        console.info('MouseDown');
+        console.log(mouseEvent);
+        selectedNode = getNodeAtPoint(mouseEvent.clientX, mouseEvent.clientY);
+        console.info(`Selected Node Index: ${selectedNode}`);
+    });
+    
+    canvas.addEventListener('mouseup', (mouseEvent) => {
+        console.info('MouseUp');
+        console.log(mouseEvent);
+        selectedNode = null;
+        console.info(`Selected Node Index: ${selectedNode}`);
+    });
+    
+    canvas.addEventListener('mousemove', (mouseEvent) => {
+        if (selectedNode || selectedNode === 0) {
+            console.info('MouseMove');
+            console.log(mouseEvent);
+            nodes[selectedNode].x = mouseEvent.clientX;
+            nodes[selectedNode].y = mouseEvent.clientY;
+        }
+        else {
+            let index = getNodeAtPoint(mouseEvent.clientX, mouseEvent.clientY);
+            if (index || index === 0 ) {
+                nodes[index].isHighlighted = true;
+                for (let i=0; i<adjMatrix[index].length; i++) {
+                    if (adjMatrix[index][i] > 0) {
+                        nodes[i].isHighlighted = true;
+                    }
                 }
             }
+            else
+                nodes.forEach(node => node.isHighlighted = false);
         }
-        else
-            nodes.forEach(node => node.isHighlighted = false);
-    }
-    drawGraph();
-});
+        drawGraph();
+    });    
+}
 
 // returns index of the node that contains the point or null
 function getNodeAtPoint (x, y) {
@@ -184,8 +227,10 @@ function initGraph (adjacencyMatrix) {
     let angleDivident = 360 / nodeCount;
 
     let offset = DEFAULT_RADIUS/2;
-    let curX = offset + (2 * DEFAULT_RADIUS);
-    let curY = offset + (2 * DEFAULT_RADIUS);
+    let canvasCenter = {
+        x: parseInt(canvas.width/2),
+        y: parseInt(canvas.height/2)
+    };
     
     for (let i=0; i<adjMatrix.length; i++) {
         nodes.push({
@@ -195,13 +240,6 @@ function initGraph (adjacencyMatrix) {
             edges: adjMatrix[i],
             isHighlighted: false,
         });
-        if ( curX + (2 * DEFAULT_RADIUS) + offset > canvas.width) {
-            curX = offset + (2 * DEFAULT_RADIUS);
-            curY = DEFAULT_RADIUS * 2 + offset;
-        }
-        else {
-            curX += (2 * DEFAULT_RADIUS) + offset;
-        }
     }
 
     drawGraph();
@@ -329,7 +367,7 @@ function getCurrentDateTimeString () {
 }
 
 // triggers a browser download with data as the serialized JSON of the given object
-function downloadObjectAsJson(exportObj, exportName){
+function downloadObjectAsJson (exportObj, exportName){
     let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
     let downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href",     dataStr);
@@ -340,7 +378,7 @@ function downloadObjectAsJson(exportObj, exportName){
 }
 
 // exports the currently loaded graph with the provided filename
-function exportGraph(filename) {
+function exportGraph (filename) {
     downloadObjectAsJson(nodes.map(function(node) {
         return {
             nodeId: node.nodeId,
@@ -352,7 +390,7 @@ function exportGraph(filename) {
 }
 
 // validate & import a graph from the uploaded file
-function importGraph(fileList) {
+function importGraph (fileList) {
     if (fileList.length <= 0) 
         return;
     
@@ -384,7 +422,7 @@ function importGraph(fileList) {
 // returns an indented string containing proper spaces, works only for JSON serialzed arrays
 // for example: [[1, 2, 3,  4], [5, 6, 7, 8]] 
 // will be indented as [\n[1,2,3,4],\n[5,6,7,8]\n]
-function indentString(stringifiedArray) {
+function indentString (stringifiedArray) {
     if (!stringifiedArray || typeof stringifiedArray !== "string") 
         return stringifiedArray;
     
@@ -396,7 +434,7 @@ function indentString(stringifiedArray) {
 }
 
 // returns the adjacency matrix representation of the provided node data array
-function generateAdjacencyMatrix(nodes) {
+function generateAdjacencyMatrix (nodes) {
     if (!nodes || !(nodes instanceof Array) || nodes.length <= 0) 
         return null;
    

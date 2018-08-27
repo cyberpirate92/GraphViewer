@@ -14,11 +14,10 @@
 <body>
     <div class="container-fluid h-100">
         <div class="row h-100">
-            <div class="col p-0">
-                <canvas width="800" height="800" id="canvas">
-                </canvas>
+            <div class="col-xs-12 col-sm-12 col-md-6 col-lg-8 p-0" id="canvasContainer" style="min-height: 350px">
+                <!-- canvas will be populated here dynamically -->
             </div>
-            <div class="col p-2 light-bg"> 
+            <div class="col-xs-12 col-sm-12 col-md-6 col-lg-4 p-2 light-bg"> 
                 <p class="display-4 text-center mt-25p">Graph Explorer</p>
                 <p>
                     Enter the <a href="http://mathworld.wolfram.com/AdjacencyMatrix.html" target="_blank">adjacency matrix</a> in the field below and click <span class="text-primary">Load</span> or use the <span class="text-secondary">Random</span> button to generate a random graph. Only undirectional graphs are supported right now.
