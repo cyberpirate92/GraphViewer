@@ -5,5 +5,11 @@ body, html {
     margin-top: 25%;
 }
 .light-bg {
-    background-color: #f1f1f3
+    background-color: #f1f1f3;
+}
+.monospacedFont {
+    font-family: monospace !important;
+}
+.mediumSizedText {
+    font-size: 1.2em !important; 
 }

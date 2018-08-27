@@ -15,6 +15,8 @@ var canvas              = document.querySelector('#canvas');
 var textarea            = document.querySelector("#matrixInput");
 var goButton            = document.querySelector("#goBtn");
 var randomizeButton     = document.querySelector("#randomizeBtn");
+var exportButton        = document.querySelector("#exportBtn");
+var importButton        = document.querySelector("#importBtn");
 var ctx                 = canvas.getContext('2d');
 
 // misc control variables
@@ -31,7 +33,8 @@ var adjMatrix           = null;
 
 // Event listeners
 window.addEventListener ('load', () => {
-    textarea.value = JSON.stringify(sample);
+
+    textarea.value = indentString(JSON.stringify(sample));
     initGraph(sample);
 });
 
@@ -74,10 +77,26 @@ randomizeButton.addEventListener ('click', () => {
         }
 
         if (temp.length > 0) {
-            textarea.value = JSON.stringify(temp);
+            textarea.value = indentString(JSON.stringify(temp));
             loadMatrix(textarea);
         }
     }
+});
+
+exportButton.addEventListener ('click', () => {
+    if (nodes.length <= 0) return;
+    let defaultFileName = `GraphViewer_${getCurrentDateTimeString()}`;
+    let filename = window.prompt("Filename", defaultFileName);
+    if (!filename) {
+        alert("File name invalid, try again");
+        return;
+    }
+    exportGraph(filename);
+});
+
+importButton.addEventListener('click', () => {
+    let fileInput = document.querySelector("#importFileInput");
+    fileInput.click();
 });
 
 canvas.addEventListener ('mousedown', (mouseEvent) => {
@@ -170,9 +189,11 @@ function initGraph (adjacencyMatrix) {
     
     for (let i=0; i<adjMatrix.length; i++) {
         nodes.push({
+            nodeId: i,
             x: getX((angleDivident * (i+1)), 120, canvasCenter.x),
             y: getY((angleDivident * (i+1)), 120, canvasCenter.y),
-            isHighlighted: false
+            edges: adjMatrix[i],
+            isHighlighted: false,
         });
         if ( curX + (2 * DEFAULT_RADIUS) + offset > canvas.width) {
             curX = offset + (2 * DEFAULT_RADIUS);
@@ -299,4 +320,94 @@ function getAngleBetweenPoints (p1, p2) {
 // returns a random number in the range (numStart, numEnd-1)
 function getRandomNumber (numStart, numEnd) {
     return parseInt((parseInt(Math.random() * 10000000) + numStart) % numEnd);
+}
+
+// returns the current datetime string in the format YYYY-MM-DDTHH-mm-SS
+function getCurrentDateTimeString () {
+    let x = new Date();
+    return `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}T${x.getHours()}-${x.getMinutes()}-${x.getSeconds()}`;
+}
+
+// triggers a browser download with data as the serialized JSON of the given object
+function downloadObjectAsJson(exportObj, exportName){
+    let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
+    let downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href",     dataStr);
+    downloadAnchorNode.setAttribute("download", exportName + ".json");
+    document.body.appendChild(downloadAnchorNode); // required for firefox
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+}
+
+// exports the currently loaded graph with the provided filename
+function exportGraph(filename) {
+    downloadObjectAsJson(nodes.map(function(node) {
+        return {
+            nodeId: node.nodeId,
+            x: node.x,
+            y: node.y,
+            edges: node.edges
+        };
+    }), filename);
+}
+
+// validate & import a graph from the uploaded file
+function importGraph(fileList) {
+    if (fileList.length <= 0) 
+        return;
+    
+    let fileHandle = fileList[0];
+    let fileReader = new FileReader();
+    fileReader.onloadend = function(event) {
+        let fileContent = fileReader.result;
+        try {
+            let importedNodes = JSON.parse(fileContent);
+            importedNodes.forEach(node => node.isHighlighted = false);
+            let matrix = generateAdjacencyMatrix(importedNodes);
+            if (matrix) {
+                adjMatrix = matrix;
+                nodes = importedNodes;
+                textarea.value = indentString(JSON.stringify(adjMatrix));
+                drawGraph();
+                console.log('Import successful');
+            }
+            else throw "Import failed";
+        }
+        catch(e) {
+            console.log(e);
+            alert('Import failed: Invalid file');
+        }
+    };
+    fileReader.readAsText(fileHandle);
+}
+
+// returns an indented string containing proper spaces, works only for JSON serialzed arrays
+// for example: [[1, 2, 3,  4], [5, 6, 7, 8]] 
+// will be indented as [\n[1,2,3,4],\n[5,6,7,8]\n]
+function indentString(stringifiedArray) {
+    if (!stringifiedArray || typeof stringifiedArray !== "string") 
+        return stringifiedArray;
+    
+    return stringifiedArray
+        .replace(/\s/g,'')          /* remove all spaces */
+        .replace(/,\[/g, ',\n[')    /* replace all ,[ occurences with ,\n[ */
+        .replace(/\[\[/g, '[\n[')    /* replace all [[ occurences with [\n[ */
+        .replace(/\]\]/g, ']\n]');   /* replace all ]] occurences with ]\n] */
+}
+
+// returns the adjacency matrix representation of the provided node data array
+function generateAdjacencyMatrix(nodes) {
+    if (!nodes || !(nodes instanceof Array) || nodes.length <= 0) 
+        return null;
+   
+    let temp = [];
+    // pushing empty arrays
+    for (let i=0; i<nodes.length; i++) {
+        temp.push(null);
+    }
+    // pushing data to indices
+    for (let i=0; i<nodes.length; i++) {
+        temp[nodes[i].nodeId] = nodes[i].edges;
+    }
+    return temp;
 }
