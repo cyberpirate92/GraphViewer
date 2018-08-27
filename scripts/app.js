@@ -1,11 +1,5 @@
 // sample adjacency matrix for initial load
-var graphC              = [
-    [0, 3, 7, 6, 0],
-    [3, 0, 0, 1, 2],
-    [7, 0, 0, 0, 9],
-    [6, 1, 0, 0 ,0],
-    [0, 2, 9, 0, 0]
-];
+var sample              = [[0,6,1,0,5,2],[6,0,5,2,5,1],[1,5,0,0,7,0],[0,2,0,0,5,9],[5,5,7,5,0,1],[2,1,0,9,1,0]];
 
 // constant values
 const DEFAULT_RADIUS      = 30;
@@ -37,8 +31,8 @@ var adjMatrix           = null;
 
 // Event listeners
 window.addEventListener ('load', () => {
-    textarea.value = JSON.stringify(graphC);
-    initGraph(graphC);
+    textarea.value = JSON.stringify(sample);
+    initGraph(sample);
 });
 
 goButton.addEventListener ('click', () => {
